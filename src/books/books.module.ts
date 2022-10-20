@@ -1,0 +1,19 @@
+import { Module, UseGuards } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Book } from './book.entity';
+import { BooksController } from './books.controller';
+
+@Module({
+  imports: [TypeOrmModule.forFeature([Book])],
+  controllers: [BooksController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
+})
+export class BooksModule {}
