@@ -7,11 +7,18 @@ import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { Public } from './jwt-auth.guard';
 import { CreateUserDto } from './auth.validations';
+
+require('dotenv').config();
 const bcrypt = require('bcrypt');
 
 const accessTokenOptions = {
-  expiresIn: '60s',
+  expiresIn: '15m',
   secret: process.env["JWT_ACCESS_TOKEN_SECRET"]
+}
+
+const refreshTokenOptions = {
+  expiresIn: '7d',
+  secret: process.env["JWT_REFRESH_TOKEN_SECRET"]
 }
 
 @Controller('auth')
@@ -31,15 +38,16 @@ export class AuthController {
 
     if (user && await bcrypt.compare(request.body.password, user.password)) {
       const data = { email: user.email, id: user.id }
-      
-      const refreshToken = this.jwtService.sign(data, { expiresIn: '7d', secret: process.env["JWT_REFRESH_TOKEN_SECRET"] })
-      user.refreshToken = await bcrypt.hash(refreshToken, 10);
+
+      const refreshToken = this.jwtService.sign(data, refreshTokenOptions)
+      user.refresh_token = await bcrypt.hash(refreshToken, 10);
       await this.userRepository.save(user);
 
       return {
         access_token: this.jwtService.sign(data, accessTokenOptions),
         refresh_token: refreshToken,
-        email: user.email
+        email: user.email,
+        id: user.id
       };
 
     } else {
@@ -57,7 +65,8 @@ export class AuthController {
       const res = await this.userRepository.insert(
         new User(
           body.email,
-          await bcrypt.hash(body.password, 10)
+          await bcrypt.hash(body.password, 10),
+          body["name"]
         ));
       return {
         message: "User created",
@@ -66,26 +75,26 @@ export class AuthController {
   }
 
   @Public()
-  @Get('refresh')
+  @Post('refresh')
   async refresh(@Body() body): Promise<object> {
     const refreshToken = body.refresh_token;
+
+    const decoded = this.jwtService.decode(refreshToken);
+    if (!decoded) {
+      throw new Error();
+    }
+
+    const user = await this.userRepository.findOne({ where: { email: decoded["email"] } });
+    if (!user || !user.refresh_token) {
+      throw new HttpException('User or token does not exist', HttpStatus.NOT_FOUND);
+    }
+
+    const isRefreshTokenMatching = await bcrypt.compare(refreshToken, user.refresh_token);
+    if (!isRefreshTokenMatching) {
+      throw new UnauthorizedException('Invalid token');
+    }
     try {
-      const decoded = this.jwtService.decode(refreshToken);
-      if (!decoded) {
-        throw new Error();
-      }
-
-      const user = await this.userRepository.findOne({ where: { email: decoded["email"] } });
-      if (!user) {
-        throw new HttpException('User with this id does not exist', HttpStatus.NOT_FOUND);
-      }
-
-      const isRefreshTokenMatching = await bcrypt.compare(refreshToken, user.refreshToken);
-      if (!isRefreshTokenMatching) {
-        throw new UnauthorizedException('Invalid token');
-      }
-
-      await this.jwtService.verifyAsync(refreshToken, accessTokenOptions);
+      await this.jwtService.verifyAsync(refreshToken, refreshTokenOptions);
 
       const data = { email: user.email, id: user.id }
       return {
@@ -93,17 +102,18 @@ export class AuthController {
         email: user.email
       };
 
-    } catch {
-      throw new UnauthorizedException('Invalid token');
+    } catch (e) {
+      throw new UnauthorizedException("Invalid token");
     }
+
   }
 
 
   @Delete('logout')
   logout(@Req() request: Request): object {
-    request.user
+    this.userRepository.update(request.user["id"], { refresh_token: null });
     return {
-      message: 'This action returns all cats',
+      message: 'User logged out',
     };
   }
 }

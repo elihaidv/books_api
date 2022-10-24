@@ -11,7 +11,10 @@ require('dotenv').config();
 @Module({
     imports: [TypeOrmModule.forFeature([User]),
     PassportModule,
-    JwtModule.register({}),],
+    JwtModule.register({
+        secret: process.env["JWT_ACCESS_TOKEN_SECRET"],
+        signOptions: { expiresIn: '15m' },
+    }),],
     controllers: [AuthController],
     providers: [JwtStrategy],
 })

@@ -1,4 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, CreateDateColumn } from 'typeorm';
+import { User } from '../auth/user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, CreateDateColumn, ManyToOne, ManyToMany } from 'typeorm';
+import { Store } from '../stores/store.entity';
 
 @Entity('books')
 export  class Book {
@@ -8,12 +10,24 @@ export  class Book {
     @Column()
     title: string;
 
-
     @Column()
     author: string;
 
-   constructor(title: string, author: string) {
-        this.title = title;
-        this.author = author;
-    }
+    @Column()
+    price: number;
+
+    @Column()
+    user_id: string;
+
+    @Column()
+    active: boolean;
+
+    @ManyToOne(type => User, user => user.books)
+    user:User
+
+    @ManyToMany(type => Store, store => store.books)
+    stores: any;
+
+    
+
 }

@@ -1,0 +1,22 @@
+h1 Hello #{order.user.name}
+    p.
+        Thank you for your order number #{order.id}.
+        Here is your order summary:
+    table
+        thead
+            tr
+                th Book Name
+                th Author
+                th Price
+        tbody
+            each book in order.cart.books
+                tr
+                    td #{book.title}    &nbsp;&nbsp;&nbsp; 
+                    td #{book.author}   &nbsp;&nbsp;&nbsp;   
+                    td #{book.price}      
+
+    p.
+        Overall price: #{order.total}
+
+    p.
+        Your order will be delivered as soon as possible.

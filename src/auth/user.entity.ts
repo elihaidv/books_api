@@ -1,4 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, CreateDateColumn } from 'typeorm';
+import { Book } from '../books/book.entity';
+import { Entity, PrimaryGeneratedColumn, Column, UpdateDateColumn, CreateDateColumn, OneToMany } from 'typeorm';
+import { Store } from '../stores/store.entity';
+import { Exclude } from 'class-transformer';
 
 @Entity("users")
 export  class User {
@@ -9,13 +12,25 @@ export  class User {
     email: string;
 
     @Column()
+    @Exclude()
     password: string;
 
     @Column()
-    refreshToken: string;
+    @Exclude()
+    refresh_token: string;
 
-   constructor(email: string, password: string) {
+    @Column()
+    name: string;
+
+    @OneToMany(type => Book, book => book.user)
+    books: Book[];
+
+    @OneToMany(type => Store, store => store.user)
+    stores: Store[];
+
+   constructor(email: string = "", password: string = "", name: string = "") {
         this.email = email;
         this.password = password;
+        this.name = name;
     }
 }

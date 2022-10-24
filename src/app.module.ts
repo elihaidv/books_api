@@ -17,6 +17,8 @@ import { Order } from './orders/order.entity';
 import { Store } from './stores/store.entity';
 import { AuthModule } from './auth/auth.module';
 import { User } from './auth/user.entity';
+const SnakeNamingStrategy = require('typeorm-naming-strategies')
+  .SnakeNamingStrategy;
 require('dotenv').config();
 
 @Module({
@@ -36,6 +38,9 @@ require('dotenv').config();
 
       migrations: ['src/migration/*.ts'],
 
+      namingStrategy: new SnakeNamingStrategy(),
+
+      logging: true
     }),
     BooksModule,
     CartsModule,

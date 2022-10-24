@@ -1,0 +1,44 @@
+version: '2'
+services:
+  books_db:
+      image: postgres
+      container_name: "books_db"
+      restart: always
+      environment:
+        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=postgres
+      volumes:
+        - ./db:/var/lib/postgresql/data
+        - ./scripts/db.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      ports:
+        - "5432:5432"
+
+  books_server:
+    build: .
+    working_dir: /usr/src/app
+    # command: node --inspect=vault-db:9229 app.js 
+    command: dist/main.js
+    restart: always
+    ports:
+      - "3000:3000"
+      
+    # Variables defined in this sections are accessible via process.ENV.VAR_NAME
+    # environment:
+    #   - DATABASE_URL=mongodb://mongo_db:27017/vault-db
+    #   - NODE_ENV=local
+    #   - ENV=local
+    #   - DB_HOST=jump-mongo-db
+    #   - vaultAppNameCode=MOE_A_TAZOZO
+
+    #   # This parameter's value is taken from the .env file
+    #   - FILE_DEBUG_LEVEL=${DEBUG_LEVEL}
+    #   - CONSOLE_DEBUG_LEVEL=${DEBUG_LEVEL}
+    #   - LOG_LEVEL=${DEBUG_LEVEL}
+    # volumes:
+    #   # - ./env-config:/usr/app/env-config:ro
+    #   - ./onsite-encryption/private.key:/usr/app/encryption/private.key
+    #   - ./onsite-encryption/primary.crt:/usr/app/encryption/primary.crt
+    depends_on: 
+     - books_db
+
+ 

@@ -1,46 +1,68 @@
-import { Controller, Delete, Get, Param, Post, Put, Req } from '@nestjs/common';
+import { Controller, Delete, Get, HttpException, HttpStatus, Param, Post, Put, Req } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
+import { OwnershipService } from '../auth/ownership.service';
 import { Repository } from 'typeorm';
-import { Cart } from './cart.entity';
+import { Cart, CartStatus } from './cart.entity';
+import { Book } from '../books/book.entity';
 
 @Controller('carts')
 export class CartsController {
-    constructor(
-        @InjectRepository(Cart)
-        private cartRepository: Repository<Cart>,
-    ) { }
+  constructor(
+    @InjectRepository(Cart)
+    private cartRepository: Repository<Cart>,
+    @InjectRepository(Book)
+    private bookRepository: Repository<Book>,
+    private ownershipService: OwnershipService
+  ) { }
 
-    @Get()
-    findAll(): Promise<Cart[]> {
-        return this.cartRepository.find();
+  @Get(':id')
+  getCurrent(@Req() request: Request): Promise<Cart> {
+    const currentCart = this.cartRepository.findOne({ where: { user_id: request.user["id"], status: CartStatus.OPEN }, relations: ["books"] });
+    if (!currentCart) {
+      throw new HttpException("Open cart not found", HttpStatus.NOT_FOUND);
+    }
+    return currentCart;
+    
+  }
+  @Post()
+  async create(@Req() request: Request): Promise<Cart> {
+
+    let currentCart = await this.cartRepository.findOne({ where: { user_id: request.user["id"], status: CartStatus.OPEN }, relations: ["books"] });
+    if (!currentCart) {
+      currentCart = new Cart();
+      currentCart.user_id = request.user["id"];
+      currentCart.books = [];
+    }
+    const book = await this.bookRepository.findOne({ where: { id: request.body.book_id } });
+    if (!book) {
+      throw new HttpException("Book not found", HttpStatus.NOT_FOUND);
+    }
+    if (currentCart.books.find(b => b.id === book.id)) {
+      throw new HttpException("Book already in cart", HttpStatus.BAD_REQUEST);
     }
 
-    @Post()
-    async create(@Req() request: Request): Promise<Cart> {
+    currentCart.books.push(book);
+    await this.cartRepository.save(currentCart);
 
-        const res = await this.cartRepository.insert(
-            new Cart(
-                //   request.body["title"],
-                //   request.body["author"]
-            ));
-        return this.cartRepository.findOne({ where: { id: res.identifiers[0].id } });
+    return currentCart;
+  }
+
+  @Delete(':id')
+  async close(@Req() request: Request): Promise<Cart> {
+    let currentCart = await this.cartRepository.findOne({ where: { user_id: request.user["id"], status: CartStatus.OPEN }, relations: ["books"] });
+    if (!currentCart) {
+      throw new HttpException("Open cart not found", HttpStatus.NOT_FOUND);
     }
 
-    @Put(':id')
-    async update(@Param() params, @Req() request: Request): Promise<Cart> {
-        const res = await this.cartRepository.update(
-            params.id,
-            new Cart(
-                //   request.body["title"],
-                //   request.body["author"]
-            ));
-        return this.cartRepository.findOne({ where: { id: params.id } });
-    }
+    currentCart.status = CartStatus.CANCELLED;
+    await this.cartRepository.save(currentCart);
 
-    @Delete(':id')
-    async delete(@Param() params): Promise<object> {
-        const res = await this.cartRepository.delete(params.id);
-        return { "message": "Cart deleted" };
-    }
+
+    return currentCart;
+  }
+
+
+
+
 }
