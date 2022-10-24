@@ -14,7 +14,7 @@ export  class Store {
     address: string;
 
     @Column()
-    active: boolean;
+    active: boolean = true;
 
     @Column()
     user_id: string;

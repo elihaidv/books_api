@@ -20,7 +20,7 @@ export  class Book {
     user_id: string;
 
     @Column()
-    active: boolean;
+    active: boolean = true;
 
     @ManyToOne(type => User, user => user.books)
     user:User

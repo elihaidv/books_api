@@ -25,3 +25,8 @@ $ docker-compose build books_server
 # Execute App
 $ docker-compose up
 ```
+
+# Test with Postman
+Import Postman collection `api.postman_collection.json`
+
+Execute collection `api` with `Run collection` option
